@@ -156,6 +156,16 @@ class Color(object):
         self.r, self.g, self.b = colorsys.hls_to_rgb(*v)
 
     @colorspace
+    def hsl(self):
+        hls = tuple(self.hls)
+        return zip("hsl", [hls[0], hls[2], hls[1]])
+
+    @hsl.setter
+    def hsl(self, v):
+        self.spaces = {}
+        self.hls = (v[0], v[2], v[1])
+
+    @colorspace
     def yiq(self):
         return zip("yiq", colorsys.rgb_to_yiq(self.r, self.g, self.b))
 
@@ -202,12 +212,17 @@ class ColorSpace(object):
     def __iter__(self):
         return (self.coords[a] for a in self.axes)
 
+    def keys(self):
+        return self.axes
+
     def distance(self, other):
+        "Return the euclidean distance between two points."
         other_space = getattr(other, self.name)
         return math.sqrt(sum((v - other_space[k]) ** 2 for
                              k, v in self.coords.items()))
 
     def l1_distance(self, other):
+        "Return the L_1 distance between two points."
         other_space = getattr(other, self.name)
         return sum(abs(v - other_space[k]) for
                    k, v in self.coords.items())
