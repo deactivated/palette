@@ -55,11 +55,20 @@ class TestColor(TestCase):
     def test_rgb(self):
         c = Color("#abc")
 
+        # Test value iteration
         assert tuple(c.rgb8) == (170, 187, 204)
+
+        # Test key iteration / access by key
         self.assertDictEqual(
             dict(c.rgb8),
             {'r': 170.0, 'b': 204.0, 'g': 187.0})
 
+        # Test access by attribute
+        assert c.rgb8.r == 170
+        assert c.rgb8.g == 187
+        assert c.rgb8.b == 204
+
+        # Check floating RGB
         assert tuple(c.rgb) == (0.6666666666666666, 0.7333333333333333, 0.8)
         self.assertDictEqual(
             dict(c.rgb),
@@ -69,5 +78,7 @@ class TestColor(TestCase):
 
     def test_hsl(self):
         c = Color("#abc")
-        assert tuple(c.hsl) == (0.5833333333333334, 0.25000000000000017, 0.7333333333333334)
-        assert tuple(c.hls) == (0.5833333333333334, 0.7333333333333334, 0.25000000000000017)
+        assert tuple(c.hsl) == tuple(c.hls) == (0.5833333333333334,
+                                                0.25000000000000017,
+                                                0.7333333333333334)
+

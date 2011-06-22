@@ -87,25 +87,39 @@ class Color(object):
                 setattr(self, k, v)
                 return
 
-    def w3_distance(self, other):
-        return self.rgb8.l1_distance(other)
+    def w3_contrast_ratio(self, other, force_srgb=True):
+        """
+        Compute the luminance ratio according to WCAG 2.0 guidelines.
 
-    def w3_contrast_test(self, background):
-        return (abs(self.luma - background.luma) > 125 and
-                self.w3_distance(background) > 500)
+        Set force_srgb to True to re-interpret the linear RGB components of
+        provided colors as if they were sRGB values.
+        """
+        c_a, c_b = (Color(srgb=tuple(self.rgb)),
+                    Color(srgb=tuple(other.rgb))) \
+                   if force_srgb else (self, other)
+        return (c_a.luminance + 0.05) / (c_b.luminance + 0.05)
+
+    def w3_contrast_test(self, background, thresh=7, force_srgb=True):
+        "Apply the contrast test defined in WCAG 2.0 G17."
+        return self.w3_contrast_ratio(background,
+                                      force_srgb=force_srgb) >= thresh
 
     def lighter(self, amt=0.2):
+        "Return a lighter version of this color."
         l = min(self.hls.l + amt, 1.0)
         return Color.from_hls(self.hls.h, l, self.hls.s, self.a)
 
     def darker(self, amt=0.2):
+        "Return a darker version of this color."
         l = max(self.hls.l - amt, 0.0)
         return Color.from_hls(self.hls.h, l, self.hls.s, self.a)
 
     @property
-    def luma(self):
-        "CCIR601 "
-        return (self.rgb8.r * 299 + self.rgb8.g * 587 + self.rgb.b * 114) / 1000.0
+    def luminance(self):
+        "Return color luminance according to CCIR-709."
+        return (self.rgb.r * 0.2126 +
+                self.rgb.g * 0.7152 +
+                self.rgb.b * 0.0722)
 
     @property
     def hex(self):
@@ -145,6 +159,23 @@ class Color(object):
         self.r = v[0] / 255.0
         self.g = v[1] / 255.0
         self.b = v[2] / 255.0
+
+    @colorspace
+    def srgb(self):
+        tx = lambda c: (12.92 * c if c <= 0.0031308 else
+                        (1.055 * c ** (1/2.4) - 0.055))
+        return [("r", tx(self.r)),
+                ("g", tx(self.g)),
+                ("b", tx(self.b))]
+
+    @srgb.setter
+    def srgb(self, v):
+        self.spaces = {}
+        tx = lambda c: (c / 12.92 if c < 0.04045 else
+                        ((c + 0.055) / 1.055) ** 2.4)
+        self.r = tx(v[0])
+        self.g = tx(v[1])
+        self.b = tx(v[2])
 
     @colorspace
     def hls(self):
