@@ -73,10 +73,12 @@ class Color(object):
     def from_hls(h, l, s, a=1.0):
         return Color(hls=(h, l, s), a=a)
 
-    def __init__(self, descr=None, a=1.0, **kwargs):
+    def __init__(self, descr=None, a=1.0, workspace="srgb", **kwargs):
         self.spaces = {}
         self._r = self._g = self._b = self._a = 0
         self.a = a
+
+        self.workspace = workspace
 
         if descr and descr.startswith("#"):
             self.rgb8 = hex_to_rgb(descr)
@@ -87,22 +89,15 @@ class Color(object):
                 setattr(self, k, v)
                 return
 
-    def w3_contrast_ratio(self, other, force_srgb=True):
+    def w3_contrast_ratio(self, other):
         """
         Compute the luminance ratio according to WCAG 2.0 guidelines.
-
-        Set force_srgb to True to re-interpret the linear RGB components of
-        provided colors as if they were sRGB values.
         """
-        c_a, c_b = (Color(srgb=tuple(self.rgb)),
-                    Color(srgb=tuple(other.rgb))) \
-                   if force_srgb else (self, other)
-        return (c_a.luminance + 0.05) / (c_b.luminance + 0.05)
+        return (self.luminance + 0.05) / (other.luminance + 0.05)
 
-    def w3_contrast_test(self, background, thresh=7, force_srgb=True):
+    def w3_contrast_test(self, background, thresh=7):
         "Apply the contrast test defined in WCAG 2.0 G17."
-        return self.w3_contrast_ratio(background,
-                                      force_srgb=force_srgb) >= thresh
+        return self.w3_contrast_ratio(background) >= thresh
 
     def lighter(self, amt=0.2):
         "Return a lighter version of this color."
@@ -117,9 +112,9 @@ class Color(object):
     @property
     def luminance(self):
         "Return color luminance according to CCIR-709."
-        return (self.rgb.r * 0.2126 +
-                self.rgb.g * 0.7152 +
-                self.rgb.b * 0.0722)
+        return (self.r * 0.2126 +
+                self.g * 0.7152 +
+                self.b * 0.0722)
 
     @property
     def hex(self):
@@ -138,27 +133,13 @@ class Color(object):
             return self.css
         return self.hex
 
-    @colorspace
+    @property
     def rgb(self):
-        return [("r", self.r), ("g", self.g), ("b", self.b)]
+        return getattr(self, self.workspace)
 
     @rgb.setter
     def rgb(self, v):
-        self.spaces = {}
-        self.r, self.g, self.b = v
-
-    @colorspace
-    def rgb8(self):
-        return [("r", round(self.r * 255)),
-                ("g", round(self.g * 255)),
-                ("b", round(self.b * 255))]
-
-    @rgb8.setter
-    def rgb8(self, v):
-        self.spaces = {}
-        self.r = v[0] / 255.0
-        self.g = v[1] / 255.0
-        self.b = v[2] / 255.0
+        setattr(self, self.workspace, v)
 
     @colorspace
     def srgb(self):
@@ -171,20 +152,40 @@ class Color(object):
     @srgb.setter
     def srgb(self, v):
         self.spaces = {}
-        tx = lambda c: (c / 12.92 if c < 0.04045 else
+        tx = lambda c: (c / 12.92 if c <= 0.04045 else
                         ((c + 0.055) / 1.055) ** 2.4)
         self.r = tx(v[0])
         self.g = tx(v[1])
         self.b = tx(v[2])
 
     @colorspace
+    def linear_rgb(self):
+        return [("r", self.r), ("g", self.g), ("b", self.b)]
+
+    @linear_rgb.setter
+    def linear_rgb(self, v):
+        self.spaces = {}
+        self.r, self.g, self.b = v
+
+    @colorspace
+    def rgb8(self):
+        return [("r", round(self.rgb.r * 255)),
+                ("g", round(self.rgb.g * 255)),
+                ("b", round(self.rgb.b * 255))]
+
+    @rgb8.setter
+    def rgb8(self, v):
+        self.spaces = {}
+        self.rgb = (v[0] / 255.0, v[1] / 255.0, v[2] / 255.0)
+
+    @colorspace
     def hls(self):
-        return zip("hls", colorsys.rgb_to_hls(self.r, self.g, self.b))
+        return zip("hls", colorsys.rgb_to_hls(self.rgb.r, self.rgb.g, self.rgb.b))
 
     @hls.setter
     def hls(self, v):
         self.spaces = {}
-        self.r, self.g, self.b = colorsys.hls_to_rgb(*v)
+        self.rgb = colorsys.hls_to_rgb(*v)
 
     @colorspace
     def hsl(self):
@@ -198,12 +199,13 @@ class Color(object):
 
     @colorspace
     def yiq(self):
-        return zip("yiq", colorsys.rgb_to_yiq(self.r, self.g, self.b))
+        return zip("yiq", colorsys.rgb_to_yiq(
+            self.rgb.r, self.rgb.g, self.rgb.b))
 
     @yiq.setter
     def yiq(self, v):
         self.spaces = {}
-        self.r, self.g, self.b = colorsys.yiq_to_rgb(*v)
+        self.rgb = colorsys.yiq_to_rgb(*v)
 
     r = clamped_property("_r", 0, 1)
     g = clamped_property("_g", 0, 1)

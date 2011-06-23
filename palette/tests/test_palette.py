@@ -52,6 +52,11 @@ class TestHelpers(TestCase):
 
 
 class TestColor(TestCase):
+    def assertTuple(self, a, b):
+        a, b = tuple(a), tuple(b)
+        self.assertEqual(len(a), len(b))
+        all(self.assertAlmostEqual(x, y) for x, y in zip(a, b))
+
     def test_rgb(self):
         c = Color("#abc")
 
@@ -69,16 +74,44 @@ class TestColor(TestCase):
         assert c.rgb8.b == 204
 
         # Check floating RGB
-        assert tuple(c.rgb) == (0.6666666666666666, 0.7333333333333333, 0.8)
+        self.assertTuple(c.rgb, (0.6666666666666666, 0.7333333333333333, 0.8))
         self.assertDictEqual(
             dict(c.rgb),
-            {'r': 0.6666666666666666, 'b': 0.8, 'g': 0.7333333333333333})
+            {'r': 0.6666666666666667, 'b': 0.8, 'g': 0.7333333333333333})
 
         assert c.hex == "#aabbcc"
 
     def test_hsl(self):
         c = Color("#abc")
-        assert tuple(c.hsl) == tuple(c.hls) == (0.5833333333333334,
-                                                0.25000000000000017,
-                                                0.7333333333333334)
+        self.assertTuple(c.hsl, (0.5833333333333334,
+                                 0.25,
+                                 0.7333333333333334))
+        assert c.hex == "#aabbcc"
 
+    def test_srgb(self):
+        c = Color("#abc")
+        self.assertTuple(c.rgb, c.srgb)
+        self.assertTuple(c.srgb, (0.6666666666666667,
+                                  0.7333333333333333,
+                                  0.8))
+        self.assertTuple(c.linear_rgb, (0.4019777798321958,
+                                        0.4969329950608704,
+                                        0.6038273388553378))
+
+        c = Color("#abc", workspace="linear_rgb")
+        self.assertTuple(c.rgb, c.linear_rgb)
+        self.assertTuple(c.linear_rgb, (0.6666666666666667,
+                                        0.7333333333333333,
+                                        0.8))
+        self.assertTuple(c.srgb, (0.8360069706715786,
+                                  0.8721031439596221,
+                                  0.9063317533440594))
+
+    def test_contrast(self):
+        a = Color("#000")
+        b = Color("#111")
+        c = Color("#aaa")
+
+        assert not a.w3_contrast_test(b)
+        assert not a.w3_contrast_test(c)
+        assert c.w3_contrast_test(a)

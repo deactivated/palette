@@ -21,8 +21,8 @@ Measure Colors:
 
     >>> a = Color("#aaaa00")
     >>> b = Color("#000000")
-    >>> a.w3_distance(b)
-    >>> a.luma()
+    >>> a.w3_contrast_ratio(b)
+    >>> a.luminance()
 
 Convert Representations:
 
