@@ -89,6 +89,11 @@ class Color(object):
                 setattr(self, k, v)
                 return
 
+    def __str__(self):
+        if self.a < 1:
+            return self.css
+        return self.hex
+
     def w3_contrast_ratio(self, other):
         """
         Compute the luminance ratio according to WCAG 2.0 guidelines.
@@ -118,20 +123,20 @@ class Color(object):
 
     @property
     def hex(self):
+        "Return the 8-bit hexadecimal representation of this color."
         return "#%02x%02x%02x" % (self.rgb8.r, self.rgb8.g, self.rgb8.b)
 
     @property
     def css(self):
-        rgb_tuple = tuple(self.rgb8)
+        """
+        Return a representation of this color suitable for CSS.  Always
+        computed using sRGB, as per CSS specification.
+        """
+        rgb_tuple = tuple(round(v * 255) for v in self.srgb)
         if self.a < 1:
             return "rgba(%d, %d, %d, %0.2f)" % (rgb_tuple + (self.a,))
         else:
             return "rgb(%d, %d, %d)" % rgb_tuple
-
-    def __str__(self):
-        if self.a < 1:
-            return self.css
-        return self.hex
 
     @property
     def rgb(self):

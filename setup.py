@@ -13,7 +13,7 @@ def read(fname):
 
 
 setup(name='palette',
-      version="0.1",
+      version="0.2",
       author="Mike Spindel",
       author_email="mike@spindel.is",
       license="MIT",
@@ -21,7 +21,7 @@ setup(name='palette',
       url="http://github.com/deactivated/palette",
       description='Easy color manipulation for Python.',
       packages=find_packages(exclude=['ez_setup']),
-      long_description=read('README.md'),
+      long_description=read('README.rst'),
       zip_safe=False,
       classifiers=[
           "Development Status :: 4 - Beta",
